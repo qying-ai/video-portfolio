@@ -1,70 +1,53 @@
-// 第一阶段只有设计方向预览。所有封面来自青映现有画风示例图，不代表真实视频。
-const works = [
-  { id: 'coffee', title: '今天，用英语点一杯咖啡', category: '情景英语', series: '跟着 KK 学英语', art: 0, ratio: '16:9', desc: '把一句英语，放进一个熟悉的生活场景。' },
-  { id: 'forest', title: '森林里的第一位客人', category: '动画故事', series: '小狐狸的咖啡馆', art: 2, ratio: '16:9', desc: '一间小店，一段关于相遇的暖心故事。' },
-  { id: 'morning', title: '把清晨画成一张明信片', category: '风格短片', series: '生活里的小片刻', art: 3, ratio: '9:16', desc: '水彩、阳光和咖啡香，留住日常里的小片刻。' },
-  { id: 'hello', title: '从一句 Hello 开始', category: '情景英语', series: '跟着 KK 学英语', art: 1, ratio: '9:16', desc: '让每一次开口，都从简单的对话开始。' },
-];
+import { works } from './videos.js';
 const main = document.querySelector('#main');
-const categories = ['全部作品', '情景英语', '动画故事', '风格短片'];
-let direction = ['screening', 'gallery', 'series'].includes(location.hash.slice(1)) ? location.hash.slice(1) : 'screening';
-let category = '全部作品';
-let selected = works[0];
-const art = (work, cls = '') => `<div class="art art-${work.art} ${cls}" role="img" aria-label="${work.title}的画风示意封面"><span class="sample-label">画风示意</span></div>`;
-const filters = () => `<div class="filters" role="group" aria-label="按作品类型筛选">${categories.map(c => `<button data-filter="${c}" aria-pressed="${category === c}">${c}</button>`).join('')}</div>`;
-const tile = work => `<article class="work"><button class="cover" data-work="${work.id}" aria-label="查看示意作品：${work.title}">${art(work)}<span class="cover-action">查看作品 <span aria-hidden="true">↗</span></span><span class="ratio">${work.ratio}</span></button><div class="work-meta"><span>${work.category}</span><span>示例选题</span></div><h3><button data-work="${work.id}">${work.title}</button></h3><p>${work.series}</p></article>`;
-function detail(work) {
-  return `<section class="detail" aria-label="作品详情"><div>${art(work, 'detail-art')}</div><div class="detail-copy"><span class="eyebrow">${work.category} / ${work.ratio}</span><h2>${work.title}</h2><p>${work.desc}</p><div class="pending" role="status"><strong>视频待接入</strong><span>目前展示的是画风示意，真实作品将在视频链接确认后替换。</span></div><button class="text-button" data-close>收起详情 ↑</button></div></section>`;
+const escape = value => String(value).replace(/[&<>"']/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+const title = work => work.title || `作品 ${String(works.indexOf(work) + 1).padStart(2, '0')}`;
+const duration = work => `${Math.floor(work.duration / 60)}:${String(Math.floor(work.duration % 60)).padStart(2,'0')}`;
+function media(work, featured = false) {
+  return `<div class="media ${featured ? 'hero-media' : ''}" style="--ratio:${work.width}/${work.height}" data-media="${work.id}"><button class="cover" data-play="${work.id}" aria-label="播放${escape(title(work))}"><img src="${escape(work.poster)}" width="${work.width}" height="${work.height}" alt="${escape(title(work))}视频封面" loading="${featured ? 'eager' : 'lazy'}" ${featured ? 'fetchpriority="high"' : ''}><span class="play-icon" aria-hidden="true">▶</span><span class="duration">${duration(work)}</span></button><div class="playback" hidden><video controls playsinline preload="none" poster="${escape(work.poster)}" aria-label="${escape(title(work))}"></video><div class="player-feedback"><span class="player-status" role="status" aria-live="polite"></span><button class="retry" data-retry hidden>重新加载</button><button class="close-player" data-close aria-label="收起${escape(title(work))}">收起 ×</button></div></div></div>`;
 }
-function render() {
-  document.body.dataset.direction = direction;
-  document.querySelectorAll('[data-direction]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.direction === direction)));
-  const visible = works.filter(w => category === '全部作品' || w.category === category);
-  if (direction === 'screening') {
-    main.innerHTML = `<section class="screening-hero"><div class="hero-copy"><span class="eyebrow">青映AI · 精选作品</span><h1>让好故事，<br>一集集发生。</h1><p>从一个角色，到一整个系列。<br>看看我们用 AI 创作的那些片刻。</p><a class="primary" href="#works">探索作品 <span aria-hidden="true">↘</span></a><span class="hero-index">本期精选 / 01</span></div><button class="hero-visual" data-work="coffee" aria-label="查看今天，用英语点一杯咖啡的示意详情">${art(works[0])}<span class="hero-caption"><span>跟着 KK 学英语<strong>今天，用英语点一杯咖啡</strong></span><span class="round-arrow" aria-hidden="true">↗</span></span></button></section><section class="works-section" id="works"><div class="section-heading"><h2>值得停留的片刻</h2><span>每一种想象，都有自己的画面。</span></div>${filters()}<div class="work-grid">${visible.map(tile).join('')}</div><div id="detail-slot"></div></section>`;
-  } else if (direction === 'gallery') {
-    main.innerHTML = `<section class="gallery-intro"><div><span class="eyebrow">青映AI · 作品集</span><h1>想象，有了画面。</h1></div><p>故事、角色、风格。<br>从这里，遇见青映的创作。</p></section><section class="works-section" id="works">${filters()}<div class="gallery-grid">${visible.map(tile).join('')}</div><div id="detail-slot"></div></section>`;
-  } else {
-    const grouped = works.filter(w => w.series === selected.series);
-    main.innerHTML = `<section class="series-intro"><span class="eyebrow">青映AI · 系列放映</span><h1>认识一个角色，<br>走进一整个故事。</h1><p>沿着熟悉的角色与画风，继续看下一集。</p></section><section class="series-layout" id="works"><aside class="series-nav" aria-label="选择系列"><h2>探索系列</h2>${[works[0], works[1], works[2]].map((w, i) => `<button data-series="${w.id}" aria-pressed="${w.series === selected.series}"><span class="series-number">0${i+1}</span><span><strong>${w.series}</strong><small>${w.category}</small></span><span aria-hidden="true">↗</span></button>`).join('')}</aside><div class="series-feature"><div class="series-screen">${art(selected)}<span class="series-stamp">${selected.series}</span></div><div class="episode-heading"><div><span class="eyebrow">当前选集 · 示意</span><h2>${selected.title}</h2></div><button class="secondary" data-work="${selected.id}">查看详情 ↗</button></div><div class="episode-list" role="group" aria-label="选择分集">${grouped.map((w,i) => `<button data-episode="${w.id}" aria-pressed="${selected.id === w.id}"><small>第 ${i+1} 集</small><strong>${w.title}</strong><span>示例选题</span></button>`).join('')}</div><div id="detail-slot"></div></div></section>`;
-  }
+if (works.length) {
+  const featured = works[0];
+  main.innerHTML = `<section class="hero"><div class="hero-copy"><span class="eyebrow">青映AI · 精选视频</span><h1>想象，<br>有了画面。</h1><p>用青映AI创作，<br>值得被看见的片刻。</p><a class="primary" href="#works">浏览视频 <span aria-hidden="true">↘</span></a></div><div class="featured">${media(featured,true)}<h2>${escape(title(featured))}</h2></div></section><section class="works-section" id="works"><div class="section-heading"><h2>精选作品</h2><span>每一条，都是一次想象的发生。</span></div><div class="gallery-grid">${works.map((work,index)=>`<article class="work">${media(work)}<div class="work-caption"><h3>${escape(title(work))}</h3><span class="work-number" aria-hidden="true">${String(index+1).padStart(2,'0')}</span></div></article>`).join('')}</div></section>`;
+} else {
+  main.innerHTML = '<section class="empty"><h1>精彩，即将呈现。</h1><p>精选视频正在整理中。</p></section>';
 }
-function changeDirection(next) {
-  direction = next;
-  category = '全部作品';
-  selected = works[0];
-  history.replaceState(null, '', `#${direction}`);
-  render();
+function start(container) {
+  const work = works.find(item => item.id === container.dataset.media);
+  const video = container.querySelector('video');
+  document.querySelectorAll('video').forEach(other => { if (other !== video) other.pause(); });
+  container.querySelector('.cover').hidden = true;
+  container.querySelector('.playback').hidden = false;
+  container.querySelector('.retry').hidden = true;
+  container.querySelector('.player-status').textContent = '正在加载视频…';
+  video.src = work.url;
+  video.focus({preventScroll:true});
+  video.play().catch(() => {
+    if (!video.error && !container.querySelector('.playback').hidden) container.querySelector('.player-status').textContent = '点击播放器播放';
+  });
 }
-document.addEventListener('click', e => {
-  const button = e.target.closest('button');
-  if (!button) return;
-  if (button.dataset.direction) changeDirection(button.dataset.direction);
-  if (button.dataset.filter) {
-    category = button.dataset.filter;
-    render();
-    [...document.querySelectorAll('[data-filter]')].find(b => b.dataset.filter === category)?.focus({ preventScroll: true });
-  }
-  if (button.dataset.series || button.dataset.episode) {
-    const id = button.dataset.series || button.dataset.episode;
-    selected = works.find(w => w.id === id);
-    render();
-    document.querySelector(`[data-${button.dataset.series ? 'series' : 'episode'}="${id}"]`)?.focus({ preventScroll: true });
-  }
-  if (button.dataset.work) {
-    const work = works.find(w => w.id === button.dataset.work);
-    const slot = document.querySelector('#detail-slot');
-    slot.innerHTML = detail(work);
-    slot.querySelector('h2').tabIndex = -1;
-    slot.querySelector('h2').focus({ preventScroll: true });
-    slot.scrollIntoView({ behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'instant' : 'smooth', block: 'center' });
-    slot.dataset.opener = work.id;
-  }
+document.querySelectorAll('video').forEach(video => {
+  const container = video.closest('.media');
+  const status = container.querySelector('.player-status');
+  video.addEventListener('playing', () => { status.textContent = ''; });
+  video.addEventListener('waiting', () => { status.textContent = '正在缓冲…'; });
+  video.addEventListener('ended', () => { status.textContent = '播放结束，可点击播放器重播'; });
+  video.addEventListener('error', () => { status.textContent = '视频加载失败，请重试'; container.querySelector('.retry').hidden = false; });
+  video.addEventListener('play', () => { document.querySelectorAll('video').forEach(other => { if (other !== video) other.pause(); }); });
+});
+document.addEventListener('click', event => {
+  const button = event.target.closest('button');
+  const container = button?.closest('.media');
+  if (!container) return;
+  if (button.hasAttribute('data-play') || button.hasAttribute('data-retry')) start(container);
   if (button.hasAttribute('data-close')) {
-    const slot = document.querySelector('#detail-slot');
-    const opener = document.querySelector(`[data-work="${slot.dataset.opener}"]`);
-    slot.innerHTML = '';
-    opener?.focus({ preventScroll: true });
+    const video = container.querySelector('video');
+    video.pause();
+    video.removeAttribute('src');
+    video.load();
+    container.querySelector('.playback').hidden = true;
+    const cover = container.querySelector('.cover');
+    cover.hidden = false;
+    cover.focus({preventScroll:true});
   }
 });
-render();

@@ -39,3 +39,11 @@
 ## 尚未验证
 
 控制台完整鉴权匹配规则、实际 TTL、Bucket Policy / 对象 ACL、CORS 完整配置及缓存行为；真实 showcase 视频、完整播放、拖动、弱网、微信与 Safari。当前不需要改变云配置。
+
+## 2026-11-09：三条真实视频验证与展示副本
+
+为用户指定的三条作品在同桶建立独立的 `ai-public/showcase/clip-{sha256前12位}/video.mp4` 与 `poster.jpg`，未覆盖原任务文件、未改变对象 ACL / Bucket ACL / CDN 配置。视频使用同桶复制，封面为本机抽帧后上传。目录对应内容哈希，避免用户或任务标识进入公开清单。
+
+三条视频及封面经 CDN、无 auth_key、携带 GitHub Origin / Referer 的 Range GET 均返回 206：MP4 为 video/mp4，封面为 image/jpeg。随后在本机展示页用不带 crossorigin 的 video 元素实际播放三条、验证第二条进度跳转。由此确认这三个已存在对象在本次检查中不需要 CDN URL 签名。当前 CORS 无需更改，页面不对视频执行 fetch / canvas 截帧。
+
+仅这三条选定作品及对应封面作为公开展示副本；没有开放整个 ai/tasks 路径。稳定 CDN 地址位于 videos.js。原始带签名链接及下载的源视频仅用于本机处理，未加入仓库。
